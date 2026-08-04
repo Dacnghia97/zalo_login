@@ -1,0 +1,12 @@
+{
+  "rewrites": [
+    {
+      "source": "/zalo_verifier:path*",
+      "destination": "/zalo_verifier:path*"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
+}
