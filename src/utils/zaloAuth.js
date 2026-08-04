@@ -69,56 +69,78 @@ export async function handleZaloCallbackCode(code) {
   const codeVerifier = sessionStorage.getItem('zalo_code_verifier') || '';
 
   try {
-    const bodyParams = new URLSearchParams();
-    bodyParams.append('app_id', ZALO_CONFIG.appId);
-    bodyParams.append('grant_type', 'authorization_code');
-    bodyParams.append('code', code);
-    bodyParams.append('code_verifier', codeVerifier);
-
-    const tokenRes = await fetch('/zalo-oauth/v4/access_token', {
+    // 1. Call Vercel Serverless Function /api/zalo-token
+    const apiRes = await fetch('/api/zalo-token', {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-        'secret_key': ZALO_CONFIG.secretKey
+        'Content-Type': 'application/json'
       },
-      body: bodyParams.toString()
+      body: JSON.stringify({
+        code,
+        code_verifier: codeVerifier
+      })
     });
 
-    const tokenData = await tokenRes.json();
+    const data = await apiRes.json();
 
-    if (tokenData.access_token) {
-      const profileRes = await fetch(`/zalo-graph/v2.0/me?fields=id,name,picture`, {
-        headers: {
-          'access_token': tokenData.access_token
-        }
-      });
-      const profileData = await profileRes.json();
-
-      // Parse Zalo user avatar picture URL
-      let avatarUrl = '';
-      if (profileData.picture?.data?.url) {
-        avatarUrl = profileData.picture.data.url;
-      } else if (typeof profileData.picture === 'string') {
-        avatarUrl = profileData.picture;
-      } else if (profileData.avatar) {
-        avatarUrl = profileData.avatar;
-      }
-
+    if (data.success && data.user) {
       return {
         success: true,
-        user: {
-          id: profileData.id || 'zalo_' + Date.now(),
-          name: profileData.name || 'Người dùng Zalo',
-          avatar: avatarUrl,
-          provider: 'Zalo'
-        }
+        user: data.user
       };
     } else {
-      console.warn('Zalo Token response:', tokenData);
-      return {
-        success: false,
-        error: tokenData.error_name || tokenData.message || 'Không thể lấy Access Token từ Zalo'
-      };
+      // Direct Fallback if Serverless API returns error
+      console.warn('Vercel API error, trying direct fallback:', data);
+      
+      const bodyParams = new URLSearchParams();
+      bodyParams.append('app_id', ZALO_CONFIG.appId);
+      bodyParams.append('grant_type', 'authorization_code');
+      bodyParams.append('code', code);
+      bodyParams.append('code_verifier', codeVerifier);
+
+      const tokenRes = await fetch('/zalo-oauth/v4/access_token', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'secret_key': ZALO_CONFIG.secretKey
+        },
+        body: bodyParams.toString()
+      });
+
+      const tokenData = await tokenRes.json();
+
+      if (tokenData.access_token) {
+        const profileRes = await fetch(`/zalo-graph/v2.0/me?fields=id,name,picture`, {
+          headers: {
+            'access_token': tokenData.access_token
+          }
+        });
+        const profileData = await profileRes.json();
+
+        let avatarUrl = '';
+        if (profileData.picture?.data?.url) {
+          avatarUrl = profileData.picture.data.url;
+        } else if (typeof profileData.picture === 'string') {
+          avatarUrl = profileData.picture;
+        } else if (profileData.avatar) {
+          avatarUrl = profileData.avatar;
+        }
+
+        return {
+          success: true,
+          user: {
+            id: profileData.id || 'zalo_' + Date.now(),
+            name: profileData.name || 'Người dùng Zalo',
+            avatar: avatarUrl,
+            provider: 'Zalo'
+          }
+        };
+      } else {
+        return {
+          success: false,
+          error: tokenData.error_name || data.error || 'Không thể xác thực token Zalo'
+        };
+      }
     }
   } catch (err) {
     console.error('Zalo OAuth error:', err);

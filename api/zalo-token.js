@@ -1,0 +1,84 @@
+export default async function handler(req, res) {
+  // Allow CORS
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
+  res.setHeader(
+    'Access-Control-Allow-Headers',
+    'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version'
+  );
+
+  if (req.method === 'OPTIONS') {
+    res.status(200).end();
+    return;
+  }
+
+  try {
+    let body = req.body;
+    if (typeof body === 'string') {
+      body = JSON.parse(body);
+    }
+    const { code, code_verifier } = body || {};
+
+    const appId = '415431868461604271';
+    const secretKey = 'nUBrL4jFY9bIVKPlEi4E';
+
+    // 1. Exchange code for access token with Zalo API
+    const bodyParams = new URLSearchParams();
+    bodyParams.append('app_id', appId);
+    bodyParams.append('grant_type', 'authorization_code');
+    bodyParams.append('code', code);
+    bodyParams.append('code_verifier', code_verifier || '');
+
+    const tokenRes = await fetch('https://oauth.zaloapp.com/v4/access_token', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'secret_key': secretKey
+      },
+      body: bodyParams.toString()
+    });
+
+    const tokenData = await tokenRes.json();
+
+    if (tokenData.access_token) {
+      // 2. Fetch Zalo user profile from Graph API
+      const profileRes = await fetch(`https://graph.zalo.me/v2.0/me?fields=id,name,picture`, {
+        headers: {
+          'access_token': tokenData.access_token
+        }
+      });
+      const profileData = await profileRes.json();
+
+      let avatarUrl = '';
+      if (profileData.picture?.data?.url) {
+        avatarUrl = profileData.picture.data.url;
+      } else if (typeof profileData.picture === 'string') {
+        avatarUrl = profileData.picture;
+      } else if (profileData.avatar) {
+        avatarUrl = profileData.avatar;
+      }
+
+      return res.status(200).json({
+        success: true,
+        user: {
+          id: profileData.id || 'zalo_' + Date.now(),
+          name: profileData.name || 'Người dùng Zalo',
+          avatar: avatarUrl,
+          provider: 'Zalo'
+        }
+      });
+    } else {
+      return res.status(400).json({
+        success: false,
+        error: tokenData.error_name || tokenData.message || 'Không thể đổi token từ Zalo OAuth',
+        details: tokenData
+      });
+    }
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+}

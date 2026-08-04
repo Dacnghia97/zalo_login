@@ -1,11 +1,15 @@
 {
   "rewrites": [
     {
+      "source": "/api/zalo-token",
+      "destination": "/api/zalo-token.js"
+    },
+    {
       "source": "/zalo_verifier:path*",
       "destination": "/zalo_verifier:path*"
     },
     {
-      "source": "/(.*)",
+      "source": "/((?!api/).*)",
       "destination": "/index.html"
     }
   ]
