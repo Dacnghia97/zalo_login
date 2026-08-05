@@ -18,7 +18,7 @@ export const Navbar = () => {
       {/* Brand Logo */}
       <a href="#" className="logo-container">
         <div className="logo-icon">
-          <Zap size={20} fill="currentColor" />
+          <Zap size={18} fill="currentColor" />
         </div>
         <div className="logo-text">
           Bot<span className="logo-domain">.vn</span>
@@ -45,22 +45,13 @@ export const Navbar = () => {
           onClick={toggleTheme} 
           title={theme === 'dark' ? 'Chuyển sang Giao diện Sáng' : 'Chuyển sang Giao diện Tối'}
         >
-          {theme === 'dark' ? <Moon size={18} /> : <Sun size={18} />}
+          {theme === 'dark' ? <Moon size={17} /> : <Sun size={17} />}
         </button>
 
         {/* Shopping Cart */}
         <button className="icon-btn" title="Giỏ hàng">
-          <ShoppingCart size={18} />
+          <ShoppingCart size={17} />
           <span className="badge">0</span>
-        </button>
-
-        {/* Mobile Hamburger Toggle Button */}
-        <button 
-          className="icon-btn mobile-hamburger-btn"
-          onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-          title="Menu"
-        >
-          {isMobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
         </button>
 
         {/* Auth State Buttons or Logged-in Profile */}
@@ -99,7 +90,7 @@ export const Navbar = () => {
                   {getInitial(user.name)}
                 </div>
               )}
-              <span className="user-name">{user.name}</span>
+              <span className="user-name desktop-user-name">{user.name}</span>
               <ChevronDown size={14} style={{ transform: isDropdownOpen ? 'rotate(180deg)' : 'rotate(0)', transition: 'transform 0.2s' }} />
             </button>
 
@@ -157,6 +148,15 @@ export const Navbar = () => {
             )}
           </div>
         )}
+
+        {/* Mobile Hamburger Toggle Button */}
+        <button 
+          className="icon-btn mobile-hamburger-btn"
+          onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+          title="Menu"
+        >
+          {isMobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
+        </button>
       </div>
 
       {/* Mobile Navigation Drawer */}
