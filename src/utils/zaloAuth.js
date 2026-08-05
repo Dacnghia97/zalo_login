@@ -41,7 +41,7 @@ async function generateCodeChallenge(v) {
   return base64urlencode(hashed);
 }
 
-// Initiate Real Zalo OAuth Login
+// Initiate Real Zalo OAuth Login (Support Mobile Native App Deep Linking)
 export async function startZaloRealLogin(customRedirectUri) {
   try {
     const codeVerifier = generateRandomString(64);
@@ -54,10 +54,15 @@ export async function startZaloRealLogin(customRedirectUri) {
 
     // Selected redirect URI (must match Zalo console whitelist)
     const redirectUri = customRedirectUri || (window.location.origin + '/');
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 
+    // Web OAuth URL
     const authUrl = `https://oauth.zaloapp.com/v4/permission?app_id=${ZALO_CONFIG.appId}&redirect_uri=${encodeURIComponent(redirectUri)}&code_challenge=${codeChallenge}&state=${state}`;
+    
+    // Mobile Native App Deep Link Scheme (zalo://)
+    const zaloAppScheme = `zalo://oauth?app_id=${ZALO_CONFIG.appId}&redirect_uri=${encodeURIComponent(redirectUri)}&code_challenge=${codeChallenge}&state=${state}`;
 
-    return { authUrl, codeVerifier, state, redirectUri };
+    return { authUrl, zaloAppScheme, isMobile, codeVerifier, state, redirectUri };
   } catch (error) {
     console.error('Error starting Zalo login:', error);
     throw error;
@@ -87,7 +92,7 @@ export async function handleZaloCallbackCode(code) {
       const accessToken = tokenData.access_token;
       let profileData = null;
 
-      // 2. Client-side fetch directly from User's Browser (Vietnam IP) to bypass Zalo IP restriction Error -501
+      // 2. Client-side fetch directly from User's Browser (Vietnam IP)
       try {
         const clientRes = await fetch(`https://graph.zalo.me/v2.0/me?access_token=${encodeURIComponent(accessToken)}&fields=id,name,picture`, {
           method: 'GET',

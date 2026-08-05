@@ -55,12 +55,23 @@ export const AuthModal = () => {
     });
   };
 
-  // Directly initiate Real Zalo OAuth Login
+  // Initiate Zalo Login (Smart Mobile App Deep Linking + Web OAuth Fallback)
   const handleRealZaloLogin = async () => {
     try {
-      showToast('Đang chuyển hướng sang cổng Đăng nhập Zalo chính thức...', 'info');
-      const { authUrl } = await startZaloRealLogin();
-      window.location.href = authUrl;
+      const { authUrl, zaloAppScheme, isMobile } = await startZaloRealLogin();
+      
+      if (isMobile) {
+        showToast('Đang bật ứng dụng Zalo trên điện thoại...', 'info');
+        // Try launching native Zalo app via scheme
+        window.location.href = zaloAppScheme;
+        // Fallback to web OAuth if native Zalo app scheme doesn't respond in 1.2s
+        setTimeout(() => {
+          window.location.href = authUrl;
+        }, 1200);
+      } else {
+        showToast('Đang chuyển hướng sang cổng Đăng nhập Zalo...', 'info');
+        window.location.href = authUrl;
+      }
     } catch (e) {
       console.error(e);
       showToast('Lỗi mở trang Đăng nhập Zalo: ' + e.message, 'error');
@@ -150,7 +161,7 @@ export const AuthModal = () => {
               <span>hoặc đăng nhập bằng</span>
             </div>
 
-            {/* Direct Real Zalo Login Button */}
+            {/* Smart Zalo Login Button */}
             <button 
               type="button" 
               className="btn-social"
