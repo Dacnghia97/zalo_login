@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { X, ShieldCheck, User, Mail, Phone, Calendar, Key, CheckCircle, Code, LogOut, ExternalLink, Copy, MessageSquare, Sparkles, Send, Loader2, Check } from 'lucide-react';
+import { X, ShieldCheck, User, Mail, Phone, Calendar, Key, CheckCircle, Code, LogOut, ExternalLink, Copy, MessageSquare, Sparkles, Send, Loader2, Check, ExternalLink as LinkIcon } from 'lucide-react';
 
 export const UserProfileModal = () => {
   const { user, isProfileModalOpen, closeProfileModal, logout, showToast } = useAuth();
@@ -8,7 +8,7 @@ export const UserProfileModal = () => {
   const [copied, setCopied] = useState(false);
   const [copiedOa, setCopiedOa] = useState(false);
 
-  // Pre-filled Welcome Message Panel State
+  // Welcome Message Panel State
   const [oaTokenInput, setOaTokenInput] = useState('');
   const [customMsgInput, setCustomMsgInput] = useState('');
   const [isSendingMsg, setIsSendingMsg] = useState(false);
@@ -16,7 +16,6 @@ export const UserProfileModal = () => {
 
   useEffect(() => {
     if (user) {
-      setOaTokenInput('nUBrL4jFY9bIVKPlEi4E');
       setCustomMsgInput(`🎉 Chào mừng ${user.name} đã đăng nhập thành công vào Bot.vn! Trang Zalo OA SmaxAi hân hạnh hỗ trợ bạn trong suốt khóa học.`);
     }
   }, [user]);
@@ -63,10 +62,10 @@ export const UserProfileModal = () => {
 
       const result = await res.json();
       setSendResult(result);
-      if (result.success) {
-        showToast(result.message || 'Đã phát lệnh gửi tin nhắn chào mừng từ Zalo OA SmaxAi!', 'success');
+      if (result.success && !result.simulated) {
+        showToast(result.message || 'Đã gửi thành công tin nhắn chào mừng từ Zalo OA SmaxAi!', 'success');
       } else {
-        showToast(`Thông báo: ${result.error || result.message}`, 'info');
+        showToast(`Thông báo: ${result.message}`, 'info');
       }
     } catch (e) {
       console.error(e);
@@ -209,23 +208,34 @@ export const UserProfileModal = () => {
               </div>
             </div>
           ) : activeTab === 'welcome' ? (
-            /* Zalo OA Welcome Message Panel with Pre-filled values */
+            /* Zalo OA Welcome Message Panel */
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               <div style={{ padding: '14px', background: 'rgba(0, 104, 255, 0.08)', borderRadius: '10px', border: '1px solid rgba(0, 104, 255, 0.25)' }}>
                 <div style={{ fontSize: '14px', fontWeight: '700', color: '#60a5fa', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <Send size={16} /> Bảng Điều Khiển Gửi Tin Chào Mừng Zalo OA
+                  <Send size={16} /> Bảng Điều Khiển Gửi Tin Chào Mừng Zalo OA SmaxAi
                 </div>
                 <div style={{ fontSize: '12px', color: 'var(--text-muted)', lineHeight: '1.5' }}>
-                  Hệ thống đã tự động điền sẵn Token và Nội dung tin nhắn chào mừng dành riêng cho <b>{user.name}</b>. Bạn chỉ cần bấm nút bên dưới!
+                  Phát lệnh gửi tin nhắn tự động từ Zalo OA <b>SmaxAi</b> tới tài khoản Zalo của <b>{user.name}</b>.
                 </div>
               </div>
 
               <div className="form-group" style={{ marginBottom: '0' }}>
-                <label className="form-label">Zalo OA Access Token (Đã điền sẵn cấu hình)</label>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+                  <label className="form-label" style={{ margin: 0 }}>Zalo OA Access Token (Chuỗi dài eyJ...)</label>
+                  <a 
+                    href="https://developers.zalo.me/tools/api-console" 
+                    target="_blank" 
+                    rel="noreferrer"
+                    style={{ fontSize: '11.5px', color: '#60a5fa', fontWeight: '700', display: 'inline-flex', alignItems: 'center', gap: '3px', textDecoration: 'underline' }}
+                  >
+                    👉 Lấy OA Token nhanh tại Zalo Console <LinkIcon size={12} />
+                  </a>
+                </div>
                 <input 
                   type="text" 
                   className="form-input"
-                  style={{ paddingLeft: '14px', fontSize: '13px', color: 'var(--primary-green)', fontWeight: '600' }}
+                  style={{ paddingLeft: '14px', fontSize: '13px', color: 'var(--text-main)' }}
+                  placeholder="Dán OA Access Token (chuỗi eyJ...) tạo tại developers.zalo.me/tools/api-console vào đây..."
                   value={oaTokenInput}
                   onChange={(e) => setOaTokenInput(e.target.value)}
                 />
@@ -254,14 +264,14 @@ export const UserProfileModal = () => {
                   </>
                 ) : (
                   <>
-                    <Send size={16} /> Gửi Tin Nhắn Chào Mừng Ngay (1-Click)
+                    <Send size={16} /> Gửi Tin Nhắn Chào Mừng Ngay
                   </>
                 )}
               </button>
 
               {sendResult && (
-                <div style={{ marginTop: '10px', padding: '12px', background: sendResult.success ? 'rgba(0, 200, 140, 0.1)' : 'rgba(239, 68, 68, 0.1)', border: sendResult.success ? '1px solid rgba(0, 200, 140, 0.3)' : '1px solid rgba(239, 68, 68, 0.3)', borderRadius: '8px' }}>
-                  <div style={{ fontSize: '13px', fontWeight: '700', color: sendResult.success ? 'var(--primary-green)' : '#ef4444', marginBottom: '6px' }}>
+                <div style={{ marginTop: '10px', padding: '12px', background: sendResult.success && !sendResult.simulated ? 'rgba(0, 200, 140, 0.1)' : 'rgba(245, 158, 11, 0.1)', border: sendResult.success && !sendResult.simulated ? '1px solid rgba(0, 200, 140, 0.3)' : '1px solid rgba(245, 158, 11, 0.3)', borderRadius: '8px' }}>
+                  <div style={{ fontSize: '13px', fontWeight: '700', color: sendResult.success && !sendResult.simulated ? 'var(--primary-green)' : '#fbbf24', marginBottom: '6px' }}>
                     {sendResult.message}
                   </div>
                   <pre style={{ fontSize: '11.5px', fontFamily: 'monospace', color: 'var(--text-muted)', overflowX: 'auto', margin: '0' }}>
