@@ -56,6 +56,7 @@ export const AuthProvider = ({ children }) => {
         if (result.success && result.user) {
           const zaloSession = {
             id: result.user.id,
+            oa_user_id: result.user.oa_user_id || `oa_smaxai_${result.user.id}`,
             name: result.user.name,
             email: 'zalo_' + result.user.id + '@zalo.me',
             avatar: result.user.avatar,

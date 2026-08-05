@@ -49,7 +49,7 @@ export default async function handler(req, res) {
       // Calculate HMAC-SHA256 appsecret_proof
       const appSecretProof = crypto.createHmac('sha256', secretKey).update(accessToken).digest('hex');
 
-      // Attempt server-side fetch
+      // Server-side profile fetch
       let profileData = {};
       try {
         const profileUrl = `https://graph.zalo.me/v2.0/me?access_token=${encodeURIComponent(accessToken)}&appsecret_proof=${appSecretProof}&fields=id,name,picture`;
@@ -63,11 +63,34 @@ export default async function handler(req, res) {
         console.error('Server profile fetch error:', e);
       }
 
+      // Fetch Zalo OA User ID Mapping for SmaxAi
+      let oaUserId = null;
+      let oaMappingRaw = null;
+
+      if (profileData.id) {
+        try {
+          const oaRes = await fetch(`https://openapi.zalo.me/v3.0/oa/user/getuseridbyapp?app_user_id=${profileData.id}`, {
+            method: 'GET',
+            headers: {
+              'access_token': accessToken
+            }
+          });
+          oaMappingRaw = await oaRes.json();
+          if (oaMappingRaw?.data?.oa_user_id) {
+            oaUserId = oaMappingRaw.data.oa_user_id;
+          }
+        } catch (oaErr) {
+          console.error('OA Mapping error:', oaErr);
+        }
+      }
+
       return res.status(200).json({
         success: true,
         access_token: accessToken,
         appsecret_proof: appSecretProof,
-        serverProfile: profileData
+        serverProfile: profileData,
+        oa_user_id: oaUserId,
+        oa_mapping_raw: oaMappingRaw
       });
     } else {
       return res.status(400).json({
