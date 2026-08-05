@@ -63,9 +63,9 @@ export const AuthProvider = ({ children }) => {
           setUser(zaloSession);
           localStorage.setItem('botvn_current_user', JSON.stringify(zaloSession));
           showToast(`Đăng nhập Zalo thành công! Chào mừng ${zaloSession.name}`, 'success');
-          if (result.zaloError) {
+          if (result.zaloNote) {
             setTimeout(() => {
-              showToast(`Zalo Graph API Note: ${result.zaloError}`, 'info');
+              showToast(result.zaloNote, 'info');
             }, 1800);
           }
           triggerConfetti();
@@ -90,7 +90,7 @@ export const AuthProvider = ({ children }) => {
     setToasts(prev => [...prev, { id, message, type }]);
     setTimeout(() => {
       setToasts(prev => prev.filter(t => t.id !== id));
-    }, 4500);
+    }, 5000);
   };
 
   const triggerConfetti = () => {

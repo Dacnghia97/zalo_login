@@ -1,5 +1,3 @@
-import crypto from 'crypto';
-
 export default async function handler(req, res) {
   // Allow CORS
   res.setHeader('Access-Control-Allow-Credentials', 'true');
@@ -46,71 +44,44 @@ export default async function handler(req, res) {
     if (tokenData.access_token) {
       const accessToken = tokenData.access_token;
       
-      // Calculate HMAC-SHA256 appsecret_proof
-      const appSecretProof = crypto.createHmac('sha256', secretKey).update(accessToken).digest('hex');
-
-      // Attempt Method 1: Graph API with access_token in Query Param
-      let profileUrl = `https://graph.zalo.me/v2.0/me?access_token=${encodeURIComponent(accessToken)}&fields=id,name,picture`;
-      let profileRes = await fetch(profileUrl);
-      let profileData = await profileRes.json();
-
-      // Attempt Method 2: Graph API with appsecret_proof if Method 1 returned error or empty name
-      if (!profileData.name && !profileData.id) {
-        profileUrl = `https://graph.zalo.me/v2.0/me?access_token=${encodeURIComponent(accessToken)}&appsecret_proof=${appSecretProof}&fields=id,name,picture`;
-        profileRes = await fetch(profileUrl, {
-          headers: {
-            'access_token': accessToken,
-            'secret_key': secretKey
-          }
-        });
-        profileData = await profileRes.json();
-      }
-
-      // Attempt Method 3: Graph API v2.0/me without fields filter
-      if (!profileData.name && !profileData.id) {
-        profileUrl = `https://graph.zalo.me/v2.0/me?access_token=${encodeURIComponent(accessToken)}`;
-        profileRes = await fetch(profileUrl);
-        profileData = await profileRes.json();
-      }
-
-      console.log('Zalo Profile Data:', profileData);
-
-      // Parse user name
-      const rawName = profileData.name || profileData.data?.name || profileData.user_name || profileData.display_name;
-      let userName = rawName;
-      let zaloError = null;
-
-      if (!userName) {
-        if (profileData.error) {
-          zaloError = `Zalo API Error ${profileData.error}: ${profileData.message || ''}`;
+      // 2. Fetch Zalo user profile EXACTLY per official Zalo Documentation
+      // URL: https://graph.zalo.me/v2.0/me?fields=id,name,picture
+      // Header: access_token: <your_access_token>
+      const profileRes = await fetch('https://graph.zalo.me/v2.0/me?fields=id,name,picture', {
+        method: 'GET',
+        headers: {
+          'access_token': accessToken
         }
-        userName = profileData.id ? `Zalo (${profileData.id})` : 'Thành viên Zalo';
-      }
+      });
+      const profileData = await profileRes.json();
 
-      // Parse user avatar
+      console.log('Official Zalo Graph API Response:', profileData);
+
+      // Parse user name per Zalo Doc structure: { error: 0, message: "Success", id: "...", name: "...", picture: { data: { url: "..." } } }
+      const userName = profileData.name || (profileData.id ? `Zalo User (${profileData.id.slice(-4)})` : null);
+      
       let avatarUrl = '';
       if (profileData.picture?.data?.url) {
         avatarUrl = profileData.picture.data.url;
-      } else if (profileData.data?.picture?.data?.url) {
-        avatarUrl = profileData.data.picture.data.url;
       } else if (typeof profileData.picture === 'string') {
         avatarUrl = profileData.picture;
-      } else if (profileData.avatar) {
-        avatarUrl = profileData.avatar;
-      } else if (profileData.picture?.url) {
-        avatarUrl = profileData.picture.url;
+      }
+
+      let zaloNote = null;
+      if (profileData.error && profileData.error !== 0) {
+        zaloNote = `Mã lỗi Zalo ${profileData.error}: ${profileData.message || 'User not visible / Chưa bật quyền user_profile'}`;
       }
 
       return res.status(200).json({
         success: true,
         user: {
           id: profileData.id || 'zalo_' + Date.now(),
-          name: userName,
+          name: userName || 'Tài khoản Zalo',
           avatar: avatarUrl,
           provider: 'Zalo'
         },
         rawProfile: profileData,
-        zaloError: zaloError
+        zaloNote: zaloNote
       });
     } else {
       return res.status(400).json({
