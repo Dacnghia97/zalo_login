@@ -105,32 +105,18 @@ export async function handleZaloCallbackCode(code) {
         profileData = tokenData.serverProfile || profileData || {};
       }
 
-      // 3. Client-side Zalo OA SmaxAi User ID Mapping lookup
-      let oaUserId = tokenData.oa_user_id || null;
-      if (!oaUserId && profileData.id) {
-        try {
-          const oaClientRes = await fetch(`https://openapi.zalo.me/v3.0/oa/user/getuseridbyapp?app_user_id=${profileData.id}`, {
-            method: 'GET',
-            headers: {
-              'access_token': accessToken
-            }
-          });
-          const oaClientData = await oaClientRes.json();
-          if (oaClientData?.data?.oa_user_id) {
-            oaUserId = oaClientData.data.oa_user_id;
-          }
-        } catch (oaErr) {
-          console.warn('Client OA mapping fetch:', oaErr);
-        }
-      }
+      // 3. Check for genuine oa_user_id returned by Zalo OA Mapping API
+      let realOaUserId = tokenData.oa_user_id || null;
+      let oaMappingStatus = 'Cần OA Access Token để lấy OA ID thật';
 
-      // Fallback OA User ID format mapped for SmaxAi
-      if (!oaUserId && profileData.id) {
-        oaUserId = `oa_smaxai_${profileData.id}`;
+      if (realOaUserId && realOaUserId !== profileData.id) {
+        oaMappingStatus = 'Đã lấy thành công OA User ID từ SmaxAi';
+      } else {
+        realOaUserId = null; // Do not fallback to same App User ID
       }
 
       console.log('Final Client Zalo Profile Data:', profileData);
-      console.log('Mapped Zalo OA SmaxAi User ID:', oaUserId);
+      console.log('Real Zalo OA SmaxAi User ID:', realOaUserId);
 
       // Parse user name
       const userName = profileData.name || profileData.data?.name || profileData.user_name || profileData.display_name || (profileData.id ? `Zalo User (${profileData.id.slice(-4)})` : 'Thành viên Zalo');
@@ -149,15 +135,15 @@ export async function handleZaloCallbackCode(code) {
         success: true,
         user: {
           id: profileData.id || 'zalo_' + Date.now(),
-          oa_user_id: oaUserId,
+          oa_user_id: realOaUserId,
           name: userName,
           avatar: avatarUrl,
           provider: 'Zalo'
         },
         rawProfile: {
           ...profileData,
-          mapped_oa_user_id_smaxai: oaUserId,
-          oa_mapping_status: 'Mapped with OA SmaxAi (98732384813610746)'
+          real_oa_user_id: realOaUserId,
+          oa_mapping_note: oaMappingStatus
         }
       };
     } else {

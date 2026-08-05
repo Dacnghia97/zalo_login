@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { X, ShieldCheck, User, Mail, Phone, Calendar, Key, CheckCircle, Code, LogOut, ExternalLink, Copy, MessageSquare, Sparkles } from 'lucide-react';
+import { X, ShieldCheck, User, Mail, Phone, Calendar, Key, CheckCircle, Code, LogOut, ExternalLink, Copy, MessageSquare, Sparkles, AlertCircle } from 'lucide-react';
 
 export const UserProfileModal = () => {
   const { user, isProfileModalOpen, closeProfileModal, logout, showToast } = useAuth();
@@ -30,7 +30,7 @@ export const UserProfileModal = () => {
     setTimeout(() => setCopiedOa(false), 2000);
   };
 
-  const displayOaUserId = user.oa_user_id || (user.id ? `oa_smaxai_${user.id}` : null);
+  const realOaUserId = user.oa_user_id;
 
   return (
     <div className="modal-overlay" onClick={closeProfileModal} style={{ zIndex: 1200 }}>
@@ -106,32 +106,45 @@ export const UserProfileModal = () => {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               
               {/* SPECIAL FEATURE: Zalo OA User ID SmaxAi */}
-              {displayOaUserId && (
-                <div style={{ padding: '14px', background: 'linear-gradient(135deg, rgba(0, 104, 255, 0.12) 0%, rgba(0, 200, 140, 0.12) 100%)', borderRadius: '12px', border: '1px solid rgba(0, 104, 255, 0.4)', boxShadow: '0 4px 14px rgba(0, 104, 255, 0.15)' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
-                    <div style={{ fontSize: '12px', fontWeight: '800', color: '#60a5fa', textTransform: 'uppercase', letterSpacing: '0.5px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <MessageSquare size={15} color="#0068ff" /> Zalo OA User ID (SmaxAi)
-                    </div>
-                    <span style={{ background: '#0068ff', color: 'white', fontSize: '10.5px', fontWeight: '800', padding: '2px 8px', borderRadius: '10px', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
-                      <Sparkles size={11} /> Sẵn sàng nhắn tin OA
-                    </span>
+              <div style={{ padding: '14px', background: 'linear-gradient(135deg, rgba(0, 104, 255, 0.12) 0%, rgba(0, 200, 140, 0.12) 100%)', borderRadius: '12px', border: '1px solid rgba(0, 104, 255, 0.4)', boxShadow: '0 4px 14px rgba(0, 104, 255, 0.15)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+                  <div style={{ fontSize: '12px', fontWeight: '800', color: '#60a5fa', textTransform: 'uppercase', letterSpacing: '0.5px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <MessageSquare size={15} color="#0068ff" /> Zalo OA User ID (SmaxAi)
                   </div>
+                  {realOaUserId ? (
+                    <span style={{ background: '#0068ff', color: 'white', fontSize: '10.5px', fontWeight: '800', padding: '2px 8px', borderRadius: '10px', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                      <Sparkles size={11} /> OA ID Thật Đã Ánh Xạ
+                    </span>
+                  ) : (
+                    <span style={{ background: 'rgba(245, 158, 11, 0.2)', color: '#fbbf24', border: '1px solid rgba(245, 158, 11, 0.4)', fontSize: '10.5px', fontWeight: '800', padding: '2px 8px', borderRadius: '10px', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                      <AlertCircle size={11} /> Cần OA Access Token
+                    </span>
+                  )}
+                </div>
+
+                {realOaUserId ? (
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px', background: 'rgba(0,0,0,0.3)', padding: '10px 12px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)' }}>
                     <code style={{ fontSize: '14px', fontWeight: '800', color: 'var(--primary-green)', fontFamily: 'monospace', wordBreak: 'break-all' }}>
-                      {displayOaUserId}
+                      {realOaUserId}
                     </code>
                     <button 
-                      onClick={() => copyOaId(displayOaUserId)} 
+                      onClick={() => copyOaId(realOaUserId)} 
                       style={{ background: 'rgba(0, 200, 140, 0.2)', color: 'var(--primary-green)', padding: '5px 10px', borderRadius: '6px', fontSize: '12px', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0, cursor: 'pointer', border: 'none' }}
                     >
                       <Copy size={13} /> {copiedOa ? 'Đã chép!' : 'Copy OA ID'}
                     </button>
                   </div>
-                  <div style={{ fontSize: '11.5px', color: 'var(--text-muted)', marginTop: '8px', lineHeight: '1.4' }}>
-                    Mã OA User ID này dùng để gọi API <code style={{ color: '#93c5fd' }}>POST /v3.0/oa/message/cs</code> gửi tin nhắn tự động từ Zalo OA <b>SmaxAi</b> tới khách hàng.
+                ) : (
+                  <div style={{ background: 'rgba(0,0,0,0.3)', padding: '10px 12px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)' }}>
+                    <div style={{ fontSize: '13px', color: '#fbbf24', fontWeight: '700' }}>
+                      Chờ OA Access Token của Zalo OA SmaxAi
+                    </div>
+                    <div style={{ fontSize: '11.5px', color: 'var(--text-muted)', marginTop: '4px', lineHeight: '1.4' }}>
+                      Zalo quy định API ánh xạ ID đòi hỏi truyền <b>OA Access Token</b> của trang SmaxAi trên server backend. Khi bạn cấu hình OA Secret Token trên backend, Zalo sẽ trả về chuỗi <code>oa_user_id</code> bằng số hoàn toàn khác với App ID ở dưới!
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
+              </div>
 
               {/* Field 1: Name */}
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 14px', background: 'rgba(255,255,255,0.03)', borderRadius: '10px', border: '1px solid var(--border-color)' }}>
