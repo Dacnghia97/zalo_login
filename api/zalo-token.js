@@ -42,14 +42,23 @@ export default async function handler(req, res) {
     const tokenData = await tokenRes.json();
 
     if (tokenData.access_token) {
-      // 2. Fetch Zalo user profile from Graph API
-      const profileRes = await fetch(`https://graph.zalo.me/v2.0/me?fields=id,name,picture`, {
+      // 2. Fetch Zalo user profile from Graph API with access_token in both Query Param & Header
+      const profileUrl = `https://graph.zalo.me/v2.0/me?access_token=${encodeURIComponent(tokenData.access_token)}&fields=id,name,picture`;
+      
+      const profileRes = await fetch(profileUrl, {
+        method: 'GET',
         headers: {
-          'access_token': tokenData.access_token
+          'access_token': tokenData.access_token,
+          'secret_key': secretKey
         }
       });
       const profileData = await profileRes.json();
 
+      console.log('Zalo Profile Data:', profileData);
+
+      // Parse name and picture
+      const userName = profileData.name || profileData.user_name || profileData.display_name || (profileData.id ? `Zalo User (${profileData.id})` : 'Tài khoản Zalo');
+      
       let avatarUrl = '';
       if (profileData.picture?.data?.url) {
         avatarUrl = profileData.picture.data.url;
@@ -57,16 +66,19 @@ export default async function handler(req, res) {
         avatarUrl = profileData.picture;
       } else if (profileData.avatar) {
         avatarUrl = profileData.avatar;
+      } else if (profileData.picture?.url) {
+        avatarUrl = profileData.picture.url;
       }
 
       return res.status(200).json({
         success: true,
         user: {
           id: profileData.id || 'zalo_' + Date.now(),
-          name: profileData.name || 'Người dùng Zalo',
+          name: userName,
           avatar: avatarUrl,
           provider: 'Zalo'
-        }
+        },
+        rawProfile: profileData
       });
     } else {
       return res.status(400).json({

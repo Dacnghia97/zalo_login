@@ -89,8 +89,7 @@ export async function handleZaloCallbackCode(code) {
         user: data.user
       };
     } else {
-      // Direct Fallback if Serverless API returns error
-      console.warn('Vercel API error, trying direct fallback:', data);
+      console.warn('Vercel API fallback:', data);
       
       const bodyParams = new URLSearchParams();
       bodyParams.append('app_id', ZALO_CONFIG.appId);
@@ -110,13 +109,14 @@ export async function handleZaloCallbackCode(code) {
       const tokenData = await tokenRes.json();
 
       if (tokenData.access_token) {
-        const profileRes = await fetch(`/zalo-graph/v2.0/me?fields=id,name,picture`, {
+        const profileRes = await fetch(`/zalo-graph/v2.0/me?access_token=${encodeURIComponent(tokenData.access_token)}&fields=id,name,picture`, {
           headers: {
             'access_token': tokenData.access_token
           }
         });
         const profileData = await profileRes.json();
 
+        const userName = profileData.name || profileData.user_name || (profileData.id ? `Zalo User (${profileData.id})` : 'Tài khoản Zalo');
         let avatarUrl = '';
         if (profileData.picture?.data?.url) {
           avatarUrl = profileData.picture.data.url;
@@ -130,7 +130,7 @@ export async function handleZaloCallbackCode(code) {
           success: true,
           user: {
             id: profileData.id || 'zalo_' + Date.now(),
-            name: profileData.name || 'Người dùng Zalo',
+            name: userName,
             avatar: avatarUrl,
             provider: 'Zalo'
           }
