@@ -48,7 +48,7 @@ export async function startZaloRealLogin(customRedirectUri) {
     const codeChallenge = await generateCodeChallenge(codeVerifier);
     const state = generateRandomString(16);
 
-    // Save PKCE verifier & state in localStorage for persistent retrieval across redirects
+    // Save PKCE verifier & state in localStorage for persistent retrieval
     localStorage.setItem('zalo_code_verifier', codeVerifier);
     localStorage.setItem('zalo_auth_state', state);
 
@@ -64,13 +64,12 @@ export async function startZaloRealLogin(customRedirectUri) {
   }
 }
 
-// Exchange Code for Access Token and Fetch User Profile
+// Exchange Code for Access Token and Fetch User Profile from Browser (Vietnam IP)
 export async function handleZaloCallbackCode(code) {
-  // Retrieve code_verifier from localStorage (or fallback to sessionStorage)
   const codeVerifier = localStorage.getItem('zalo_code_verifier') || sessionStorage.getItem('zalo_code_verifier') || '';
 
   try {
-    // Call Vercel Serverless Function /api/zalo-token
+    // 1. Call Vercel Serverless Function /api/zalo-token to get access_token
     const apiRes = await fetch('/api/zalo-token', {
       method: 'POST',
       headers: {
@@ -82,20 +81,60 @@ export async function handleZaloCallbackCode(code) {
       })
     });
 
-    const data = await apiRes.json();
+    const tokenData = await apiRes.json();
 
-    if (data.success && data.user) {
+    if (tokenData.success && tokenData.access_token) {
+      const accessToken = tokenData.access_token;
+      let profileData = null;
+
+      // 2. Client-side fetch directly from User's Browser (Vietnam IP) to bypass Zalo IP restriction Error -501
+      try {
+        const clientRes = await fetch(`https://graph.zalo.me/v2.0/me?access_token=${encodeURIComponent(accessToken)}&fields=id,name,picture`, {
+          method: 'GET',
+          headers: {
+            'access_token': accessToken
+          }
+        });
+        profileData = await clientRes.json();
+      } catch (clientErr) {
+        console.warn('Client fetch failed, using server profile:', clientErr);
+        profileData = tokenData.serverProfile;
+      }
+
+      if (!profileData || !profileData.name) {
+        profileData = tokenData.serverProfile || profileData || {};
+      }
+
+      console.log('Final Client Zalo Profile Data:', profileData);
+
+      // Parse user name
+      const userName = profileData.name || profileData.data?.name || profileData.user_name || profileData.display_name || (profileData.id ? `Zalo User (${profileData.id.slice(-4)})` : 'Thành viên Zalo');
+
+      // Parse user avatar
+      let avatarUrl = '';
+      if (profileData.picture?.data?.url) {
+        avatarUrl = profileData.picture.data.url;
+      } else if (profileData.data?.picture?.data?.url) {
+        avatarUrl = profileData.data.picture.data.url;
+      } else if (typeof profileData.picture === 'string') {
+        avatarUrl = profileData.picture;
+      }
+
       return {
         success: true,
-        user: data.user,
-        rawProfile: data.rawProfile,
-        zaloError: data.zaloError
+        user: {
+          id: profileData.id || 'zalo_' + Date.now(),
+          name: userName,
+          avatar: avatarUrl,
+          provider: 'Zalo'
+        },
+        rawProfile: profileData
       };
     } else {
       return {
         success: false,
-        error: data.error || 'Không thể xác thực token Zalo',
-        details: data
+        error: tokenData.error || 'Không thể đổi access_token Zalo',
+        details: tokenData
       };
     }
   } catch (err) {
