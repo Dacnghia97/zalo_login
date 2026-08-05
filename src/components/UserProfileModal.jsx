@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { X, ShieldCheck, User, Mail, Phone, Calendar, Key, CheckCircle, Code, LogOut, ExternalLink, Copy, MessageSquare, Sparkles, Send, Loader2, Check } from 'lucide-react';
 
@@ -8,11 +8,18 @@ export const UserProfileModal = () => {
   const [copied, setCopied] = useState(false);
   const [copiedOa, setCopiedOa] = useState(false);
 
-  // Welcome Message Panel State
+  // Pre-filled Welcome Message Panel State
   const [oaTokenInput, setOaTokenInput] = useState('');
   const [customMsgInput, setCustomMsgInput] = useState('');
   const [isSendingMsg, setIsSendingMsg] = useState(false);
   const [sendResult, setSendResult] = useState(null);
+
+  useEffect(() => {
+    if (user) {
+      setOaTokenInput('nUBrL4jFY9bIVKPlEi4E');
+      setCustomMsgInput(`🎉 Chào mừng ${user.name} đã đăng nhập thành công vào Bot.vn! Trang Zalo OA SmaxAi hân hạnh hỗ trợ bạn trong suốt khóa học.`);
+    }
+  }, [user]);
 
   if (!isProfileModalOpen || !user) return null;
 
@@ -202,35 +209,33 @@ export const UserProfileModal = () => {
               </div>
             </div>
           ) : activeTab === 'welcome' ? (
-            /* Zalo OA Welcome Message Panel */
+            /* Zalo OA Welcome Message Panel with Pre-filled values */
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               <div style={{ padding: '14px', background: 'rgba(0, 104, 255, 0.08)', borderRadius: '10px', border: '1px solid rgba(0, 104, 255, 0.25)' }}>
                 <div style={{ fontSize: '14px', fontWeight: '700', color: '#60a5fa', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '6px' }}>
                   <Send size={16} /> Bảng Điều Khiển Gửi Tin Chào Mừng Zalo OA
                 </div>
                 <div style={{ fontSize: '12px', color: 'var(--text-muted)', lineHeight: '1.5' }}>
-                  Phát lệnh gửi tin nhắn tự động từ Zalo OA <b>SmaxAi</b> tới tài khoản Zalo của <b>{user.name}</b>.
+                  Hệ thống đã tự động điền sẵn Token và Nội dung tin nhắn chào mừng dành riêng cho <b>{user.name}</b>. Bạn chỉ cần bấm nút bên dưới!
                 </div>
               </div>
 
               <div className="form-group" style={{ marginBottom: '0' }}>
-                <label className="form-label">Zalo OA Access Token (Tùy chọn cho Token thật)</label>
+                <label className="form-label">Zalo OA Access Token (Đã điền sẵn cấu hình)</label>
                 <input 
                   type="text" 
                   className="form-input"
-                  style={{ paddingLeft: '14px', fontSize: '13px' }}
-                  placeholder="Dán OA Access Token của SmaxAi tại đây (hoặc để trống để test thử)..."
+                  style={{ paddingLeft: '14px', fontSize: '13px', color: 'var(--primary-green)', fontWeight: '600' }}
                   value={oaTokenInput}
                   onChange={(e) => setOaTokenInput(e.target.value)}
                 />
               </div>
 
               <div className="form-group" style={{ marginBottom: '0' }}>
-                <label className="form-label">Nội dung tin nhắn chào mừng</label>
+                <label className="form-label">Nội dung tin nhắn chào mừng cá nhân hóa</label>
                 <textarea 
                   className="form-input"
                   style={{ paddingLeft: '14px', fontSize: '13px', minHeight: '75px', resize: 'vertical' }}
-                  placeholder={`🎉 Chào mừng ${user.name} đã đăng nhập thành công vào Bot.vn! Trang Zalo OA SmaxAi hân hạnh hỗ trợ bạn.`}
                   value={customMsgInput}
                   onChange={(e) => setCustomMsgInput(e.target.value)}
                 />
@@ -239,17 +244,17 @@ export const UserProfileModal = () => {
               <button 
                 type="button"
                 className="btn-primary"
-                style={{ width: '100%', padding: '12px', background: '#0068ff', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', border: 'none', borderRadius: '8px', fontWeight: '700', cursor: 'pointer' }}
+                style={{ width: '100%', padding: '13px', background: '#0068ff', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', border: 'none', borderRadius: '8px', fontWeight: '700', fontSize: '14.5px', cursor: 'pointer', boxShadow: '0 4px 14px rgba(0, 104, 255, 0.4)' }}
                 onClick={handleSendWelcomeMessage}
                 disabled={isSendingMsg}
               >
                 {isSendingMsg ? (
                   <>
-                    <Loader2 size={16} className="spin" /> Đang phát lệnh tới Zalo OA API...
+                    <Loader2 size={16} className="spin" /> Đang phát lệnh tới Zalo OA SmaxAi...
                   </>
                 ) : (
                   <>
-                    <Send size={16} /> Gửi Tin Nhắn Chào Mừng Ngay
+                    <Send size={16} /> Gửi Tin Nhắn Chào Mừng Ngay (1-Click)
                   </>
                 )}
               </button>
