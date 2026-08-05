@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { Zap, Moon, Sun, ShoppingCart, User, LogOut, BookOpen, Settings, ChevronDown } from 'lucide-react';
+import { Zap, Moon, Sun, ShoppingCart, User, LogOut, BookOpen, Settings, ChevronDown, Menu, X } from 'lucide-react';
 
 export const Navbar = () => {
   const { user, openAuthModal, openProfileModal, logout, theme, toggleTheme } = useAuth();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const getInitial = (name) => {
     if (!name) return 'U';
@@ -24,7 +25,7 @@ export const Navbar = () => {
         </div>
       </a>
 
-      {/* Navigation Links */}
+      {/* Desktop Navigation Links */}
       <nav>
         <ul className="nav-menu">
           <li><a href="#" className="nav-link active">Trang chủ</a></li>
@@ -53,9 +54,18 @@ export const Navbar = () => {
           <span className="badge">0</span>
         </button>
 
+        {/* Mobile Hamburger Toggle Button */}
+        <button 
+          className="icon-btn mobile-hamburger-btn"
+          onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+          title="Menu"
+        >
+          {isMobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
+        </button>
+
         {/* Auth State Buttons or Logged-in Profile */}
         {!user ? (
-          <>
+          <div className="desktop-auth-btns">
             <button 
               className="btn-outline" 
               onClick={() => openAuthModal('register')}
@@ -68,7 +78,7 @@ export const Navbar = () => {
             >
               Đăng nhập
             </button>
-          </>
+          </div>
         ) : (
           <div className="user-profile-menu">
             <button 
@@ -148,6 +158,39 @@ export const Navbar = () => {
           </div>
         )}
       </div>
+
+      {/* Mobile Navigation Drawer */}
+      {isMobileMenuOpen && (
+        <div className="mobile-nav-drawer">
+          <ul className="mobile-nav-list">
+            <li><a href="#" className="mobile-nav-item active" onClick={() => setIsMobileMenuOpen(false)}>Trang chủ</a></li>
+            <li><a href="#online" className="mobile-nav-item" onClick={() => setIsMobileMenuOpen(false)}>Học Online</a></li>
+            <li><a href="#offline" className="mobile-nav-item" onClick={() => setIsMobileMenuOpen(false)}>Học Offline</a></li>
+            <li><a href="#challenge" className="mobile-nav-item" onClick={() => setIsMobileMenuOpen(false)}>Khóa Thử Thách</a></li>
+            <li><a href="#marketer" className="mobile-nav-item" onClick={() => setIsMobileMenuOpen(false)}>Next Marketer</a></li>
+            <li><a href="#knowledge" className="mobile-nav-item" onClick={() => setIsMobileMenuOpen(false)}>Kiến Thức</a></li>
+          </ul>
+
+          {!user && (
+            <div className="mobile-auth-actions">
+              <button 
+                className="btn-outline" 
+                style={{ width: '100%', padding: '12px' }}
+                onClick={() => { setIsMobileMenuOpen(false); openAuthModal('register'); }}
+              >
+                Đăng ký
+              </button>
+              <button 
+                className="btn-primary" 
+                style={{ width: '100%', padding: '12px' }}
+                onClick={() => { setIsMobileMenuOpen(false); openAuthModal('login'); }}
+              >
+                Đăng nhập
+              </button>
+            </div>
+          )}
+        </div>
+      )}
     </header>
   );
 };
