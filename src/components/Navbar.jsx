@@ -3,7 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { Zap, Moon, Sun, ShoppingCart, User, LogOut, BookOpen, Settings, ChevronDown } from 'lucide-react';
 
 export const Navbar = () => {
-  const { user, openAuthModal, logout, theme, toggleTheme } = useAuth();
+  const { user, openAuthModal, openProfileModal, logout, theme, toggleTheme } = useAuth();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
   const getInitial = (name) => {
@@ -81,7 +81,6 @@ export const Navbar = () => {
                   alt={user.name} 
                   className="avatar-img"
                   onError={(e) => {
-                    // Fallback if avatar URL fails to load
                     e.target.style.display = 'none';
                   }}
                 />
@@ -96,7 +95,11 @@ export const Navbar = () => {
 
             {isDropdownOpen && (
               <div className="dropdown-menu">
-                <div className="dropdown-header" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div 
+                  className="dropdown-header" 
+                  style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }}
+                  onClick={() => { setIsDropdownOpen(false); openProfileModal(); }}
+                >
                   {user.avatar ? (
                     <img 
                       src={user.avatar} 
@@ -116,7 +119,13 @@ export const Navbar = () => {
                   </div>
                 </div>
 
-                <button className="dropdown-item" onClick={() => setIsDropdownOpen(false)}>
+                <button 
+                  className="dropdown-item" 
+                  onClick={() => {
+                    setIsDropdownOpen(false);
+                    openProfileModal();
+                  }}
+                >
                   <User size={16} /> Thông tin cá nhân
                 </button>
                 <button className="dropdown-item" onClick={() => setIsDropdownOpen(false)}>

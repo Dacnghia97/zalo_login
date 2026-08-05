@@ -18,6 +18,7 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [users, setUsers] = useState(INITIAL_USERS);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [authTab, setAuthTab] = useState('login'); // 'login' | 'register'
   const [theme, setTheme] = useState('dark');
   const [toasts, setToasts] = useState([]);
@@ -58,16 +59,13 @@ export const AuthProvider = ({ children }) => {
             name: result.user.name,
             email: 'zalo_' + result.user.id + '@zalo.me',
             avatar: result.user.avatar,
-            provider: 'Zalo'
+            provider: 'Zalo',
+            rawProfile: result.rawProfile || {},
+            loginTime: new Date().toLocaleString('vi-VN')
           };
           setUser(zaloSession);
           localStorage.setItem('botvn_current_user', JSON.stringify(zaloSession));
           showToast(`Đăng nhập Zalo thành công! Chào mừng ${zaloSession.name}`, 'success');
-          if (result.zaloNote) {
-            setTimeout(() => {
-              showToast(result.zaloNote, 'info');
-            }, 1800);
-          }
           triggerConfetti();
         } else {
           showToast(`Zalo OAuth Note: ${result.error || 'Cần đăng ký Callback URL trên Zalo Developers'}`, 'info');
@@ -114,6 +112,14 @@ export const AuthProvider = ({ children }) => {
     setIsAuthModalOpen(false);
   };
 
+  const openProfileModal = () => {
+    setIsProfileModalOpen(true);
+  };
+
+  const closeProfileModal = () => {
+    setIsProfileModalOpen(false);
+  };
+
   const login = (identifier, password) => {
     const foundUser = users.find(
       u => (u.email.toLowerCase() === identifier.toLowerCase() || u.phone === identifier) && u.password === password
@@ -124,7 +130,8 @@ export const AuthProvider = ({ children }) => {
         id: foundUser.id,
         name: foundUser.name,
         email: foundUser.email,
-        phone: foundUser.phone
+        phone: foundUser.phone,
+        loginTime: new Date().toLocaleString('vi-VN')
       };
       setUser(userSession);
       localStorage.setItem('botvn_current_user', JSON.stringify(userSession));
@@ -152,14 +159,15 @@ export const AuthProvider = ({ children }) => {
       name,
       email,
       phone,
-      password
+      password,
+      loginTime: new Date().toLocaleString('vi-VN')
     };
 
     const updatedUsers = [...users, newUser];
     setUsers(updatedUsers);
     localStorage.setItem('botvn_registered_users', JSON.stringify(updatedUsers));
 
-    const userSession = { id: newUser.id, name: newUser.name, email: newUser.email, phone: newUser.phone };
+    const userSession = { id: newUser.id, name: newUser.name, email: newUser.email, phone: newUser.phone, loginTime: newUser.loginTime };
     setUser(userSession);
     localStorage.setItem('botvn_current_user', JSON.stringify(userSession));
 
@@ -169,25 +177,10 @@ export const AuthProvider = ({ children }) => {
     return { success: true };
   };
 
-  const loginWithZalo = (zaloUser = {}) => {
-    const userSession = {
-      id: zaloUser.id || 'zalo_' + Date.now(),
-      name: zaloUser.name || 'Nguyễn Văn Zalo',
-      email: zaloUser.email || 'zalouser@zalo.me',
-      phone: zaloUser.phone || '0901234567',
-      provider: 'Zalo'
-    };
-    setUser(userSession);
-    localStorage.setItem('botvn_current_user', JSON.stringify(userSession));
-    closeAuthModal();
-    showToast(`Đăng nhập bằng Zalo thành công! Chào mừng ${userSession.name}`, 'success');
-    triggerConfetti();
-    return { success: true };
-  };
-
   const logout = () => {
     setUser(null);
     localStorage.removeItem('botvn_current_user');
+    setIsProfileModalOpen(false);
     showToast('Đã đăng xuất tài khoản thành công', 'info');
   };
 
@@ -202,9 +195,11 @@ export const AuthProvider = ({ children }) => {
         setAuthTab,
         openAuthModal,
         closeAuthModal,
+        isProfileModalOpen,
+        openProfileModal,
+        closeProfileModal,
         login,
         register,
-        loginWithZalo,
         logout,
         toasts,
         showToast,

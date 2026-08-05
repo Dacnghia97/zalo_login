@@ -6,6 +6,7 @@ import { ProgramCards } from './components/ProgramCards';
 import { Footer } from './components/Footer';
 import { FloatingWidget } from './components/FloatingWidget';
 import { AuthModal } from './components/AuthModal';
+import { UserProfileModal } from './components/UserProfileModal';
 import { Toast } from './components/Toast';
 
 function App() {
@@ -20,6 +21,7 @@ function App() {
         <Footer />
         <FloatingWidget />
         <AuthModal />
+        <UserProfileModal />
         <Toast />
       </div>
     </AuthProvider>
