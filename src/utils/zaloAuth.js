@@ -48,9 +48,9 @@ export async function startZaloRealLogin(customRedirectUri) {
     const codeChallenge = await generateCodeChallenge(codeVerifier);
     const state = generateRandomString(16);
 
-    // Save PKCE verifier & state in sessionStorage
-    sessionStorage.setItem('zalo_code_verifier', codeVerifier);
-    sessionStorage.setItem('zalo_auth_state', state);
+    // Save PKCE verifier & state in localStorage for persistent retrieval across redirects
+    localStorage.setItem('zalo_code_verifier', codeVerifier);
+    localStorage.setItem('zalo_auth_state', state);
 
     // Selected redirect URI (must match Zalo console whitelist)
     const redirectUri = customRedirectUri || (window.location.origin + '/');
@@ -66,10 +66,11 @@ export async function startZaloRealLogin(customRedirectUri) {
 
 // Exchange Code for Access Token and Fetch User Profile
 export async function handleZaloCallbackCode(code) {
-  const codeVerifier = sessionStorage.getItem('zalo_code_verifier') || '';
+  // Retrieve code_verifier from localStorage (or fallback to sessionStorage)
+  const codeVerifier = localStorage.getItem('zalo_code_verifier') || sessionStorage.getItem('zalo_code_verifier') || '';
 
   try {
-    // 1. Call Vercel Serverless Function /api/zalo-token
+    // Call Vercel Serverless Function /api/zalo-token
     const apiRes = await fetch('/api/zalo-token', {
       method: 'POST',
       headers: {
@@ -86,61 +87,16 @@ export async function handleZaloCallbackCode(code) {
     if (data.success && data.user) {
       return {
         success: true,
-        user: data.user
+        user: data.user,
+        rawProfile: data.rawProfile,
+        zaloError: data.zaloError
       };
     } else {
-      console.warn('Vercel API fallback:', data);
-      
-      const bodyParams = new URLSearchParams();
-      bodyParams.append('app_id', ZALO_CONFIG.appId);
-      bodyParams.append('grant_type', 'authorization_code');
-      bodyParams.append('code', code);
-      bodyParams.append('code_verifier', codeVerifier);
-
-      const tokenRes = await fetch('/zalo-oauth/v4/access_token', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-          'secret_key': ZALO_CONFIG.secretKey
-        },
-        body: bodyParams.toString()
-      });
-
-      const tokenData = await tokenRes.json();
-
-      if (tokenData.access_token) {
-        const profileRes = await fetch(`/zalo-graph/v2.0/me?access_token=${encodeURIComponent(tokenData.access_token)}&fields=id,name,picture`, {
-          headers: {
-            'access_token': tokenData.access_token
-          }
-        });
-        const profileData = await profileRes.json();
-
-        const userName = profileData.name || profileData.user_name || (profileData.id ? `Zalo User (${profileData.id})` : 'Tài khoản Zalo');
-        let avatarUrl = '';
-        if (profileData.picture?.data?.url) {
-          avatarUrl = profileData.picture.data.url;
-        } else if (typeof profileData.picture === 'string') {
-          avatarUrl = profileData.picture;
-        } else if (profileData.avatar) {
-          avatarUrl = profileData.avatar;
-        }
-
-        return {
-          success: true,
-          user: {
-            id: profileData.id || 'zalo_' + Date.now(),
-            name: userName,
-            avatar: avatarUrl,
-            provider: 'Zalo'
-          }
-        };
-      } else {
-        return {
-          success: false,
-          error: tokenData.error_name || data.error || 'Không thể xác thực token Zalo'
-        };
-      }
+      return {
+        success: false,
+        error: data.error || 'Không thể xác thực token Zalo',
+        details: data
+      };
     }
   } catch (err) {
     console.error('Zalo OAuth error:', err);

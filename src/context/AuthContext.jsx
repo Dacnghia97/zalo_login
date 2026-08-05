@@ -63,9 +63,13 @@ export const AuthProvider = ({ children }) => {
           setUser(zaloSession);
           localStorage.setItem('botvn_current_user', JSON.stringify(zaloSession));
           showToast(`Đăng nhập Zalo thành công! Chào mừng ${zaloSession.name}`, 'success');
+          if (result.zaloError) {
+            setTimeout(() => {
+              showToast(`Zalo Graph API Note: ${result.zaloError}`, 'info');
+            }, 1800);
+          }
           triggerConfetti();
         } else {
-          // If Zalo OAuth callback returned error (e.g. invalid redirect_uri on test environment)
           showToast(`Zalo OAuth Note: ${result.error || 'Cần đăng ký Callback URL trên Zalo Developers'}`, 'info');
         }
         // Clean URL params

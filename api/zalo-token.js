@@ -46,42 +46,48 @@ export default async function handler(req, res) {
     if (tokenData.access_token) {
       const accessToken = tokenData.access_token;
       
-      // Calculate HMAC-SHA256 appsecret_proof for Zalo Security
+      // Calculate HMAC-SHA256 appsecret_proof
       const appSecretProof = crypto.createHmac('sha256', secretKey).update(accessToken).digest('hex');
 
-      // 2. Fetch Zalo user profile from Graph API with appsecret_proof
-      let profileUrl = `https://graph.zalo.me/v2.0/me?access_token=${encodeURIComponent(accessToken)}&appsecret_proof=${appSecretProof}&fields=id,name,picture`;
-      
-      let profileRes = await fetch(profileUrl, {
-        method: 'GET',
-        headers: {
-          'access_token': accessToken,
-          'secret_key': secretKey,
-          'app_id': appId
-        }
-      });
+      // Attempt Method 1: Graph API with access_token in Query Param
+      let profileUrl = `https://graph.zalo.me/v2.0/me?access_token=${encodeURIComponent(accessToken)}&fields=id,name,picture`;
+      let profileRes = await fetch(profileUrl);
       let profileData = await profileRes.json();
 
-      // If appsecret_proof fetch returned error, try fallback without appsecret_proof
-      if (profileData.error || !profileData.id) {
-        console.warn('Fallback without appsecret_proof:', profileData);
-        profileUrl = `https://graph.zalo.me/v2.0/me?access_token=${encodeURIComponent(accessToken)}&fields=id,name,picture`;
+      // Attempt Method 2: Graph API with appsecret_proof if Method 1 returned error or empty name
+      if (!profileData.name && !profileData.id) {
+        profileUrl = `https://graph.zalo.me/v2.0/me?access_token=${encodeURIComponent(accessToken)}&appsecret_proof=${appSecretProof}&fields=id,name,picture`;
         profileRes = await fetch(profileUrl, {
-          method: 'GET',
           headers: {
-            'access_token': accessToken
+            'access_token': accessToken,
+            'secret_key': secretKey
           }
         });
         profileData = await profileRes.json();
       }
 
-      console.log('Zalo User Profile Data:', profileData);
+      // Attempt Method 3: Graph API v2.0/me without fields filter
+      if (!profileData.name && !profileData.id) {
+        profileUrl = `https://graph.zalo.me/v2.0/me?access_token=${encodeURIComponent(accessToken)}`;
+        profileRes = await fetch(profileUrl);
+        profileData = await profileRes.json();
+      }
 
-      // Extract user name across Zalo payload formats
+      console.log('Zalo Profile Data:', profileData);
+
+      // Parse user name
       const rawName = profileData.name || profileData.data?.name || profileData.user_name || profileData.display_name;
-      const userName = rawName ? rawName : (profileData.id ? `Thành viên Zalo (${profileData.id.slice(-4)})` : 'Thành viên Zalo');
+      let userName = rawName;
+      let zaloError = null;
 
-      // Extract user avatar across Zalo payload formats
+      if (!userName) {
+        if (profileData.error) {
+          zaloError = `Zalo API Error ${profileData.error}: ${profileData.message || ''}`;
+        }
+        userName = profileData.id ? `Zalo (${profileData.id})` : 'Thành viên Zalo';
+      }
+
+      // Parse user avatar
       let avatarUrl = '';
       if (profileData.picture?.data?.url) {
         avatarUrl = profileData.picture.data.url;
@@ -103,7 +109,8 @@ export default async function handler(req, res) {
           avatar: avatarUrl,
           provider: 'Zalo'
         },
-        rawProfile: profileData
+        rawProfile: profileData,
+        zaloError: zaloError
       });
     } else {
       return res.status(400).json({
