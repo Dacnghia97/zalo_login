@@ -1,3 +1,5 @@
+import crypto from 'crypto';
+
 export default async function handler(req, res) {
   // Allow CORS
   res.setHeader('Access-Control-Allow-Credentials', 'true');
@@ -23,7 +25,7 @@ export default async function handler(req, res) {
     const appId = '415431868461604271';
     const secretKey = 'nUBrL4jFY9bIVKPlEi4E';
 
-    // 1. Exchange code for access token with Zalo API
+    // 1. Exchange authorization code for access token with Zalo OAuth API
     const bodyParams = new URLSearchParams();
     bodyParams.append('app_id', appId);
     bodyParams.append('grant_type', 'authorization_code');
@@ -42,26 +44,49 @@ export default async function handler(req, res) {
     const tokenData = await tokenRes.json();
 
     if (tokenData.access_token) {
-      // 2. Fetch Zalo user profile from Graph API with access_token in both Query Param & Header
-      const profileUrl = `https://graph.zalo.me/v2.0/me?access_token=${encodeURIComponent(tokenData.access_token)}&fields=id,name,picture`;
+      const accessToken = tokenData.access_token;
       
-      const profileRes = await fetch(profileUrl, {
+      // Calculate HMAC-SHA256 appsecret_proof for Zalo Security
+      const appSecretProof = crypto.createHmac('sha256', secretKey).update(accessToken).digest('hex');
+
+      // 2. Fetch Zalo user profile from Graph API with appsecret_proof
+      let profileUrl = `https://graph.zalo.me/v2.0/me?access_token=${encodeURIComponent(accessToken)}&appsecret_proof=${appSecretProof}&fields=id,name,picture`;
+      
+      let profileRes = await fetch(profileUrl, {
         method: 'GET',
         headers: {
-          'access_token': tokenData.access_token,
-          'secret_key': secretKey
+          'access_token': accessToken,
+          'secret_key': secretKey,
+          'app_id': appId
         }
       });
-      const profileData = await profileRes.json();
+      let profileData = await profileRes.json();
 
-      console.log('Zalo Profile Data:', profileData);
+      // If appsecret_proof fetch returned error, try fallback without appsecret_proof
+      if (profileData.error || !profileData.id) {
+        console.warn('Fallback without appsecret_proof:', profileData);
+        profileUrl = `https://graph.zalo.me/v2.0/me?access_token=${encodeURIComponent(accessToken)}&fields=id,name,picture`;
+        profileRes = await fetch(profileUrl, {
+          method: 'GET',
+          headers: {
+            'access_token': accessToken
+          }
+        });
+        profileData = await profileRes.json();
+      }
 
-      // Parse name and picture
-      const userName = profileData.name || profileData.user_name || profileData.display_name || (profileData.id ? `Zalo User (${profileData.id})` : 'Tài khoản Zalo');
-      
+      console.log('Zalo User Profile Data:', profileData);
+
+      // Extract user name across Zalo payload formats
+      const rawName = profileData.name || profileData.data?.name || profileData.user_name || profileData.display_name;
+      const userName = rawName ? rawName : (profileData.id ? `Thành viên Zalo (${profileData.id.slice(-4)})` : 'Thành viên Zalo');
+
+      // Extract user avatar across Zalo payload formats
       let avatarUrl = '';
       if (profileData.picture?.data?.url) {
         avatarUrl = profileData.picture.data.url;
+      } else if (profileData.data?.picture?.data?.url) {
+        avatarUrl = profileData.data.picture.data.url;
       } else if (typeof profileData.picture === 'string') {
         avatarUrl = profileData.picture;
       } else if (profileData.avatar) {
