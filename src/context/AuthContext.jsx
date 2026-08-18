@@ -68,6 +68,33 @@ export const AuthProvider = ({ children }) => {
           localStorage.setItem('botvn_current_user', JSON.stringify(zaloSession));
           showToast(`Đăng nhập Zalo thành công! Chào mừng ${zaloSession.name}`, 'success');
           triggerConfetti();
+
+          // AUTOMATIC WELCOME MESSAGE DISPATCH VIA ZALO OA SMAXAI
+          fetch('/api/send-zalo-welcome', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              app_user_id: zaloSession.id,
+              oa_user_id: zaloSession.oa_user_id,
+              user_name: zaloSession.name,
+              custom_message: `🎉 Chào mừng ${zaloSession.name} đã đăng nhập thành công vào hệ thống đào tạo Bot.vn! Trang Zalo OA SmaxAi hân hạnh đồng hành cùng bạn.`
+            })
+          })
+          .then(res => res.json())
+          .then(welcomeRes => {
+            console.log('Automated Zalo OA Welcome Message result:', welcomeRes);
+            if (welcomeRes.success) {
+              setTimeout(() => {
+                showToast(`💬 Đã kích hoạt tin nhắn chào mừng tự động từ Zalo OA SmaxAi tới ${zaloSession.name}!`, 'success');
+              }, 1200);
+            }
+          })
+          .catch(err => {
+            console.warn('Automated welcome message trigger error:', err);
+          });
+
         } else {
           showToast(`Zalo OAuth Note: ${result.error || 'Cần đăng ký Callback URL trên Zalo Developers'}`, 'info');
         }
