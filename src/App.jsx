@@ -7,6 +7,7 @@ import { Footer } from './components/Footer';
 import { FloatingWidget } from './components/FloatingWidget';
 import { AuthModal } from './components/AuthModal';
 import { UserProfileModal } from './components/UserProfileModal';
+import { ZaloPhonePermissionSheet } from './components/ZaloPhonePermissionSheet';
 import { Toast } from './components/Toast';
 
 function App() {
@@ -22,6 +23,7 @@ function App() {
         <FloatingWidget />
         <AuthModal />
         <UserProfileModal />
+        <ZaloPhonePermissionSheet />
         <Toast />
       </div>
     </AuthProvider>

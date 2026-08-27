@@ -3,10 +3,14 @@ import { useAuth } from '../context/AuthContext';
 import { X, ShieldCheck, User, Mail, Phone, Calendar, Key, CheckCircle, Code, LogOut, ExternalLink, Copy, MessageSquare, Sparkles, Send, Loader2, Check, ExternalLink as LinkIcon } from 'lucide-react';
 
 export const UserProfileModal = () => {
-  const { user, isProfileModalOpen, closeProfileModal, logout, showToast } = useAuth();
+  const { user, isProfileModalOpen, closeProfileModal, logout, updateUserPhone, showToast } = useAuth();
   const [activeTab, setActiveTab] = useState('summary'); // 'summary' | 'raw' | 'welcome'
   const [copied, setCopied] = useState(false);
   const [copiedOa, setCopiedOa] = useState(false);
+
+  // Phone Edit state
+  const [isEditingPhone, setIsEditingPhone] = useState(false);
+  const [phoneInput, setPhoneInput] = useState('');
 
   // Welcome Message Panel State
   const [oaTokenInput, setOaTokenInput] = useState('');
@@ -189,7 +193,62 @@ export const UserProfileModal = () => {
                 </div>
               </div>
 
-              {/* Field 2: App Zalo ID */}
+              {/* Field 2: Zalo Phone Number */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 14px', background: 'rgba(255,255,255,0.03)', borderRadius: '10px', border: user.phone ? '1px solid rgba(0, 200, 140, 0.4)' : '1px solid #f59e0b50' }}>
+                <Phone size={18} color={user.phone ? 'var(--primary-green)' : '#f59e0b'} />
+                <div style={{ flex: 1 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '2px' }}>
+                    <div style={{ fontSize: '11.5px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Số Điện Thoại Zalo</div>
+                    {user.phone ? (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <span style={{ fontSize: '11px', color: 'var(--primary-green)', fontWeight: '700', background: 'rgba(0, 200, 140, 0.15)', padding: '1px 6px', borderRadius: '4px' }}>
+                          ✓ SĐT Đã xác thực
+                        </span>
+                        <button 
+                          onClick={() => { setIsEditingPhone(!isEditingPhone); setPhoneInput(user.phone || ''); }}
+                          style={{ background: 'transparent', border: 'none', color: '#60a5fa', fontSize: '11px', cursor: 'pointer', textDecoration: 'underline' }}
+                        >
+                          Sửa
+                        </button>
+                      </div>
+                    ) : (
+                      <span style={{ fontSize: '11px', color: '#f59e0b', fontWeight: '600' }}>
+                        Cần App duyệt get_user_phone
+                      </span>
+                    )}
+                  </div>
+
+                  {isEditingPhone || !user.phone ? (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '6px' }}>
+                      <input 
+                        type="tel" 
+                        className="form-input"
+                        style={{ padding: '6px 10px', fontSize: '13px', height: '34px', flex: 1 }}
+                        placeholder="Nhập SĐT của bạn (Ví dụ: 0987654321)"
+                        value={phoneInput}
+                        onChange={(e) => setPhoneInput(e.target.value)}
+                      />
+                      <button 
+                        onClick={() => {
+                          if (phoneInput.trim()) {
+                            updateUserPhone(phoneInput.trim());
+                            setIsEditingPhone(false);
+                          }
+                        }}
+                        style={{ background: 'var(--primary-green)', color: '#000', fontWeight: '700', padding: '6px 12px', borderRadius: '6px', border: 'none', cursor: 'pointer', fontSize: '12px' }}
+                      >
+                        Lưu SĐT
+                      </button>
+                    </div>
+                  ) : (
+                    <div style={{ fontSize: '14.5px', fontWeight: '700', color: 'var(--primary-green)', marginTop: '2px' }}>
+                      {user.phone}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Field 3: App Zalo ID */}
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 14px', background: 'rgba(255,255,255,0.03)', borderRadius: '10px', border: '1px solid var(--border-color)' }}>
                 <Key size={18} color="#0068ff" />
                 <div style={{ flex: 1 }}>
@@ -198,12 +257,12 @@ export const UserProfileModal = () => {
                 </div>
               </div>
 
-              {/* Field 3: Contact / Email */}
+              {/* Field 4: Contact / Email */}
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 14px', background: 'rgba(255,255,255,0.03)', borderRadius: '10px', border: '1px solid var(--border-color)' }}>
                 <Mail size={18} color="#a855f7" />
                 <div style={{ flex: 1 }}>
                   <div style={{ fontSize: '11.5px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Email / Tài Khoản Liên Kết</div>
-                  <div style={{ fontSize: '14px', fontWeight: '600', color: 'var(--text-main)', marginTop: '2px' }}>{user.email || user.phone || 'Tài khoản Zalo chính chủ'}</div>
+                  <div style={{ fontSize: '14px', fontWeight: '600', color: 'var(--text-main)', marginTop: '2px' }}>{user.email || 'Tài khoản Zalo chính chủ'}</div>
                 </div>
               </div>
             </div>

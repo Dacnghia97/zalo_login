@@ -22,8 +22,8 @@ export default async function handler(req, res) {
     }
     const { code, code_verifier } = body || {};
 
-    const appId = '415431868461604271';
-    const secretKey = 'nUBrL4jFY9bIVKPlEi4E';
+    const appId = '836228948044012533';
+    const secretKey = 'Ce3dmWEyBHIYWUTVOrd7';
 
     // 1. Exchange authorization code for access token with Zalo OAuth API
     const bodyParams = new URLSearchParams();
@@ -49,10 +49,10 @@ export default async function handler(req, res) {
       // Calculate HMAC-SHA256 appsecret_proof
       const appSecretProof = crypto.createHmac('sha256', secretKey).update(accessToken).digest('hex');
 
-      // Server-side profile fetch
+      // Server-side profile fetch (including phone scope if user granted permission)
       let profileData = {};
       try {
-        const profileUrl = `https://graph.zalo.me/v2.0/me?access_token=${encodeURIComponent(accessToken)}&appsecret_proof=${appSecretProof}&fields=id,name,picture`;
+        const profileUrl = `https://graph.zalo.me/v2.0/me?access_token=${encodeURIComponent(accessToken)}&appsecret_proof=${appSecretProof}&fields=id,name,picture,phone`;
         const profileRes = await fetch(profileUrl, {
           headers: {
             'access_token': accessToken
@@ -61,6 +61,48 @@ export default async function handler(req, res) {
         profileData = await profileRes.json();
       } catch (e) {
         console.error('Server profile fetch error:', e);
+      }
+
+      // Dedicated phone number fetch via Zalo Graph API me/info (including Zalo Mini App phone_token support)
+      let extractedPhone = profileData.phone || profileData.number || profileData.data?.number || profileData.data?.phone || null;
+      
+      const { phone_token } = body || {};
+      if (phone_token) {
+        try {
+          const tokenPhoneRes = await fetch('https://graph.zalo.me/v2.0/me/info', {
+            method: 'GET',
+            headers: {
+              'access_token': accessToken,
+              'code': phone_token,
+              'secret_key': secretKey
+            }
+          });
+          const tokenPhoneJson = await tokenPhoneRes.json();
+          if (tokenPhoneJson?.data?.number) {
+            extractedPhone = tokenPhoneJson.data.number;
+          }
+        } catch (tpErr) {
+          console.error('Mini App phone_token decoding error:', tpErr);
+        }
+      }
+
+      if (!extractedPhone) {
+        try {
+          const phoneUrl = `https://graph.zalo.me/v2.0/me/info?access_token=${encodeURIComponent(accessToken)}&appsecret_proof=${appSecretProof}`;
+          const phoneRes = await fetch(phoneUrl, {
+            headers: {
+              'access_token': accessToken
+            }
+          });
+          const phoneJson = await phoneRes.json();
+          if (phoneJson?.data?.number) {
+            extractedPhone = phoneJson.data.number;
+          } else if (phoneJson?.number) {
+            extractedPhone = phoneJson.number;
+          }
+        } catch (phoneErr) {
+          console.error('Dedicated phone fetch error:', phoneErr);
+        }
       }
 
       // Fetch Zalo OA User ID Mapping for SmaxAi
@@ -89,6 +131,7 @@ export default async function handler(req, res) {
         access_token: accessToken,
         appsecret_proof: appSecretProof,
         serverProfile: profileData,
+        phone: extractedPhone,
         oa_user_id: oaUserId,
         oa_mapping_raw: oaMappingRaw
       });

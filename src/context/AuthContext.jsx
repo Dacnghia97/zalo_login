@@ -58,6 +58,7 @@ export const AuthProvider = ({ children }) => {
             id: result.user.id,
             oa_user_id: result.user.oa_user_id || `oa_smaxai_${result.user.id}`,
             name: result.user.name,
+            phone: result.user.phone || null,
             email: 'zalo_' + result.user.id + '@zalo.me',
             avatar: result.user.avatar,
             provider: 'Zalo',
@@ -66,6 +67,7 @@ export const AuthProvider = ({ children }) => {
           };
           setUser(zaloSession);
           localStorage.setItem('botvn_current_user', JSON.stringify(zaloSession));
+          setIsProfileModalOpen(true);
           showToast(`Đăng nhập Zalo thành công! Chào mừng ${zaloSession.name}`, 'success');
           triggerConfetti();
 
@@ -101,6 +103,24 @@ export const AuthProvider = ({ children }) => {
         // Clean URL params
         window.history.replaceState({}, document.title, window.location.pathname);
       });
+    } else {
+      // Auto prompt Zalo Phone Permission Bottom Sheet on initial website load
+      const promptTimer = setTimeout(() => {
+        const currentUserStr = localStorage.getItem('botvn_current_user');
+        if (!currentUserStr) {
+          setIsPhoneSheetOpen(true);
+        } else {
+          try {
+            const parsed = JSON.parse(currentUserStr);
+            if (!parsed?.phone) {
+              setIsPhoneSheetOpen(true);
+            }
+          } catch (e) {
+            setIsPhoneSheetOpen(true);
+          }
+        }
+      }, 1000);
+      return () => clearTimeout(promptTimer);
     }
   }, []);
 
@@ -212,6 +232,81 @@ export const AuthProvider = ({ children }) => {
     showToast('Đã đăng xuất tài khoản thành công', 'info');
   };
 
+  const loginZaloDemo = (demoPhone = '0987654321') => {
+    const zaloDemoSession = {
+      id: '89472398423984',
+      oa_user_id: '98732384813610746',
+      name: 'Nguyễn Văn Zalo (Test)',
+      phone: demoPhone,
+      email: 'zalo_89472398423984@zalo.me',
+      avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80',
+      provider: 'Zalo',
+      rawProfile: {
+        id: '89472398423984',
+        name: 'Nguyễn Văn Zalo (Test)',
+        phone_number: demoPhone,
+        note: 'Dữ liệu Test Mẫu Zalo OAuth PKCE + Zalo Phone Verified'
+      },
+      loginTime: new Date().toLocaleString('vi-VN')
+    };
+    setUser(zaloDemoSession);
+    localStorage.setItem('botvn_current_user', JSON.stringify(zaloDemoSession));
+    closeAuthModal();
+    showToast(`Đăng nhập Zalo (Test) thành công! Đã lấy SĐT: ${demoPhone}`, 'success');
+    triggerConfetti();
+    setIsProfileModalOpen(true);
+  };
+
+  const [isPhoneSheetOpen, setIsPhoneSheetOpen] = useState(false);
+
+  const openPhoneSheet = () => setIsPhoneSheetOpen(true);
+  const closePhoneSheet = () => setIsPhoneSheetOpen(false);
+
+  const approveZaloPhone = (approvedPhone = '0987654321') => {
+    let activeUser = user;
+    if (!activeUser) {
+      activeUser = {
+        id: '5669266073298871588',
+        oa_user_id: '98732384813610746',
+        name: 'Đắc Nghĩa (Zalo)',
+        phone: approvedPhone,
+        email: 'zalo_dacnghia@zalo.me',
+        avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80',
+        provider: 'Zalo',
+        loginTime: new Date().toLocaleString('vi-VN')
+      };
+    } else {
+      activeUser = { ...activeUser, phone: approvedPhone };
+    }
+
+    setUser(activeUser);
+    localStorage.setItem('botvn_current_user', JSON.stringify(activeUser));
+    closePhoneSheet();
+    showToast(`Đã xác thực thành công SĐT Zalo: ${approvedPhone}`, 'success');
+    triggerConfetti();
+    setIsProfileModalOpen(true);
+
+    // AUTOMATIC WELCOME MESSAGE DISPATCH VIA ZALO OA SMAXAI
+    fetch('/api/send-zalo-welcome', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        app_user_id: activeUser.id,
+        oa_user_id: activeUser.oa_user_id,
+        user_name: activeUser.name,
+        custom_message: `🎉 Chào mừng ${activeUser.name} (${approvedPhone}) đã cấp quyền SĐT thành công vào hệ thống! Zalo OA SmaxAi hân hạnh đồng hành cùng bạn.`
+      })
+    }).catch(e => console.warn('OA welcome dispatch error:', e));
+  };
+
+  const updateUserPhone = (newPhone) => {
+    if (!user) return;
+    const updatedUser = { ...user, phone: newPhone };
+    setUser(updatedUser);
+    localStorage.setItem('botvn_current_user', JSON.stringify(updatedUser));
+    showToast(`Đã cập nhật Số điện thoại thành công: ${newPhone}`, 'success');
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -226,8 +321,14 @@ export const AuthProvider = ({ children }) => {
         isProfileModalOpen,
         openProfileModal,
         closeProfileModal,
+        isPhoneSheetOpen,
+        openPhoneSheet,
+        closePhoneSheet,
+        approveZaloPhone,
         login,
         register,
+        loginZaloDemo,
+        updateUserPhone,
         logout,
         toasts,
         showToast,

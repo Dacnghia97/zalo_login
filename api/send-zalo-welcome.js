@@ -30,7 +30,7 @@ export default async function handler(req, res) {
     }
 
     const messageText = custom_message || `🎉 Chào mừng ${user_name || 'bạn'} đã đăng nhập thành công vào hệ thống đào tạo Bot.vn! Trang Zalo OA SmaxAi hân hạnh hỗ trợ bạn.`;
-    const activeToken = oa_access_token || 'nUBrL4jFY9bIVKPlEi4E';
+    const activeToken = oa_access_token || 'Ce3dmWEyBHIYWUTVOrd7';
 
     // Call Zalo OA Open API to send CS message
     try {

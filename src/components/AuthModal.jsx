@@ -4,7 +4,7 @@ import { X, Mail, Lock, User, Phone, Eye, EyeOff, ArrowRight } from 'lucide-reac
 import { startZaloRealLogin } from '../utils/zaloAuth';
 
 export const AuthModal = () => {
-  const { isAuthModalOpen, closeAuthModal, authTab, setAuthTab, login, register, showToast } = useAuth();
+  const { isAuthModalOpen, closeAuthModal, authTab, setAuthTab, login, register, loginZaloDemo, showToast } = useAuth();
 
   // Login Form state
   const [loginIdentifier, setLoginIdentifier] = useState('');
@@ -170,7 +170,7 @@ export const AuthModal = () => {
                 background: '#0068ff', 
                 color: 'white', 
                 fontWeight: '700', 
-                marginBottom: '10px',
+                marginBottom: '8px',
                 border: 'none',
                 boxShadow: '0 4px 14px rgba(0, 104, 255, 0.35)',
                 cursor: 'pointer'
@@ -187,7 +187,25 @@ export const AuthModal = () => {
               }}>
                 Zalo
               </span>
-              Đăng Nhập Bằng Zalo
+              Đăng Nhập Bằng Zalo (OAuth Thật)
+            </button>
+
+            {/* Instant Test Zalo Login Button (Quick Demo) */}
+            <button 
+              type="button" 
+              className="btn-social"
+              style={{ 
+                width: '100%', 
+                background: 'rgba(0, 200, 140, 0.15)', 
+                color: 'var(--primary-green)', 
+                fontWeight: '700', 
+                marginBottom: '10px',
+                border: '1px dashed rgba(0, 200, 140, 0.5)',
+                cursor: 'pointer'
+              }}
+              onClick={() => loginZaloDemo('0987654321')}
+            >
+              ⚡ Test Nhanh Zalo (Mô phỏng lấy SĐT & OA Message)
             </button>
 
             <div className="social-btns">
